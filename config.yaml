@@ -1,0 +1,13 @@
+ppo:
+  actor_critic:
+    hidden_dim: 256
+  hyperparameters:
+    epsilon: 0.2
+    steps: 5
+    n_exps: 25
+    print_freq: 10
+    reward_threshold: 200
+    gamma: 0.99
+    lr: 0.0001
+    episodes: 1000
+
