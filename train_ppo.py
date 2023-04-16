@@ -10,7 +10,7 @@ from utils.rl import compute_advantages, compute_returns
 from utils.functions import save_weights, load_config
 from models.ppo import update_policy, MultiLayerPerceptron, ActorCritic
 
-def train_one_episode(env, ppo, optimizer, discount_factor, ppo_steps, ppo_clip):
+def train_one_episode(env, ppo, optimizer, discount_factor, ppo_steps, ppo_clip, max_actions):
     ppo.train()
         
     states = []
@@ -21,7 +21,7 @@ def train_one_episode(env, ppo, optimizer, discount_factor, ppo_steps, ppo_clip)
     episode_reward = 0
 
     state, _ = env.reset()
-    terminated = False
+    terminated, c = False, 0
     while not terminated: 
         state = torch.FloatTensor(state).unsqueeze(0)
         states.append(state)
@@ -38,6 +38,9 @@ def train_one_episode(env, ppo, optimizer, discount_factor, ppo_steps, ppo_clip)
         rewards.append(reward)
         
         episode_reward += reward
+        c+=1
+        if c == max_actions:
+            break
 
     states = torch.cat(states)
     actions = torch.cat(actions)    
@@ -51,10 +54,10 @@ def train_one_episode(env, ppo, optimizer, discount_factor, ppo_steps, ppo_clip)
 
     return policy_loss, value_loss, episode_reward
 
-def evaluate_one_episode(env, ppo):
+def evaluate_one_episode(env, ppo, max_actions):
     ppo.eval()
     
-    terminated = False
+    terminated, c = False, 0
     episode_reward = 0
 
     state, _ = env.reset()
@@ -68,6 +71,10 @@ def evaluate_one_episode(env, ppo):
         action = torch.argmax(action_prob, dim = -1)
         state, reward, terminated, truncated, info = env.step(action.item())
         episode_reward += reward
+
+        c+=1
+        if c==max_actions:
+            break
         
     return episode_reward
 
@@ -93,6 +100,7 @@ reward_threshold = cfg['ppo']['hyperparameters']['reward_threshold']
 gamma = cfg['ppo']['hyperparameters']['gamma']
 lr = cfg['ppo']['hyperparameters']['lr']
 episodes = cfg['ppo']['hyperparameters']['episodes']
+max_actions = cfg['ppo']['hyperparameters']['max_actions']
 
 optimizer = optim.Adam(ppo.parameters(), lr = lr)
 
@@ -101,8 +109,8 @@ test_rewards = []
 
 for episode in range(1, episodes+1):
     
-    clip_loss, value_loss, train_reward = train_one_episode(train_env, ppo, optimizer, gamma, steps, epsilon)
-    test_reward = evaluate_one_episode(test_env, ppo)
+    clip_loss, value_loss, train_reward = train_one_episode(train_env, ppo, optimizer, gamma, steps, epsilon, max_actions)
+    test_reward = evaluate_one_episode(test_env, ppo, max_actions)
     
     train_rewards.append(train_reward)
     test_rewards.append(test_reward)
