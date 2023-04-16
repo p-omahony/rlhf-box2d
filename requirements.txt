@@ -1,0 +1,7 @@
+gym[box2d]
+matplotlib
+torch
+numpy
+ipython
+scikit-video
+pyaml
