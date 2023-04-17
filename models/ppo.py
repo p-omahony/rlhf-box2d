@@ -4,6 +4,8 @@ import torch
 import torch.nn.functional as F
 import torch.distributions as distributions
 
+from typing import Tuple
+
 class ActorCritic(nn.Module):
     def __init__(self, actor, critic):
         super().__init__()
@@ -79,3 +81,21 @@ class MultiLayerPerceptron(nn.Module):
     def forward(self, x):
         x = self.fc(x)
         return x
+
+class LSTMNetwork(nn.Module):
+    def __init__(self, input_size: int, hidden_size: int, output_size: int):
+        super(LSTMNetwork, self).__init__()
+
+        self.hidden_size = hidden_size
+        self.lstm = nn.LSTM(input_size, hidden_size)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x: torch.Tensor, h: torch.Tensor) -> Tuple:
+        out, h = self.lstm(x, h)
+        out = out[-1, :, :]  # Take the last output of LSTM sequence
+        out = self.fc(out)
+        return out, h
+
+    def init_hidden(self, batch_size: int) -> Tuple:
+        return (torch.zeros(1, batch_size, self.hidden_size),
+                torch.zeros(1, batch_size, self.hidden_size))

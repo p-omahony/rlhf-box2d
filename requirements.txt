@@ -1,8 +1,9 @@
-gym[box2d]==0.26.2
+gym-anytrading
 matplotlib
 torch
 numpy
 ipython
 scikit-video
 pyaml
-wandb
+yfinance
+# wandb

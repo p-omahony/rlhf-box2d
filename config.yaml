@@ -1,3 +1,9 @@
+env:
+  ticker: AAPL
+  interval: 1d
+  period: 1y
+  train_prop: 0.8
+  window_size: 30
 ppo:
   actor_critic:
     hidden_dim: 512
@@ -9,6 +15,6 @@ ppo:
     reward_threshold: 120
     gamma: 0.99
     lr: 0.0001
-    episodes: 1000
+    episodes: 100
     max_actions: 600
 
