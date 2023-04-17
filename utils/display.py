@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import torch
+import torch.nn.functional as F
 import gym
 from typing import List
 import os
@@ -41,7 +43,21 @@ def write_random_episode_video(env: gym.Env) -> None:
         state, reward, terminated, truncated, info = env.step(action)
     write_video('video.mp4', frames)
 
+def write_episode(env: gym.Env, policy) -> None:
+    state, _ = env.reset()
+    scene = env.render()
+    terminated = False
+    frames = [scene]
+    while not terminated:
+        frames.append(env.render())
+        state = torch.FloatTensor(state).unsqueeze(0)
+        with torch.no_grad():
+            action_pred, _ = policy(state)
+            action_prob = F.softmax(action_pred, dim = -1)
+        action = torch.argmax(action_prob, dim = -1)
+        state, reward, terminated, truncated, info = env.step(action.item())
+    write_video('solved.mp4', frames)
 
 if __name__ == '__main__' :
-    env = env = gym.make("LunarLander-v2", render_mode='rgb_array')
+    env = gym.make("LunarLander-v2", render_mode='rgb_array')
     write_random_episode_video(env)
