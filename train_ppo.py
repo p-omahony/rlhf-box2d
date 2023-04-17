@@ -22,7 +22,7 @@ def train_one_episode(env, ppo, optimizer, discount_factor, ppo_steps, ppo_clip,
 
     state, _ = env.reset()
     terminated, c = False, 0
-    while not terminated: 
+    while not terminated and c < max_actions: 
         state = torch.FloatTensor(state).unsqueeze(0)
         states.append(state)
         action_pred, value_pred = ppo(state)    
@@ -39,8 +39,6 @@ def train_one_episode(env, ppo, optimizer, discount_factor, ppo_steps, ppo_clip,
         
         episode_reward += reward
         c+=1
-        if c == max_actions:
-            break
 
     states = torch.cat(states)
     actions = torch.cat(actions)    
@@ -62,7 +60,7 @@ def evaluate_one_episode(env, ppo, max_actions):
 
     state, _ = env.reset()
 
-    while not terminated:
+    while not terminated and c < max_actions:
         state = torch.FloatTensor(state).unsqueeze(0)
         with torch.no_grad():
             action_pred, _ = ppo(state)
@@ -73,8 +71,6 @@ def evaluate_one_episode(env, ppo, max_actions):
         episode_reward += reward
 
         c+=1
-        if c==max_actions:
-            break
         
     return episode_reward
 
