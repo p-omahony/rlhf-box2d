@@ -59,23 +59,23 @@ def update_policy(ppo, states, actions, log_pi_theta_old, advantages, returns, o
     
     return total_policy_loss / ppo_steps, total_value_loss / ppo_steps
 
-class MultiLayerPerceptron(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, dropout = 0.1):
-        super().__init__()
+# class MultiLayerPerceptron(nn.Module):
+#     def __init__(self, input_dim, hidden_dim, output_dim, dropout = 0.1):
+#         super().__init__()
         
-        self.fc = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.Dropout(dropout),
-            nn.PReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.Dropout(dropout),
-            nn.PReLU(),
-            # nn.Linear(hidden_dim, hidden_dim),
-            # nn.Dropout(dropout),
-            # nn.PReLU(),
-            nn.Linear(hidden_dim, output_dim),
-        )
+#         self.fc = nn.Sequential(
+#             nn.Linear(input_dim, hidden_dim),
+#             nn.Dropout(dropout),
+#             nn.PReLU(),
+#             nn.Linear(hidden_dim, hidden_dim),
+#             nn.Dropout(dropout),
+#             nn.PReLU(),
+#             # nn.Linear(hidden_dim, hidden_dim),
+#             # nn.Dropout(dropout),
+#             # nn.PReLU(),
+#             nn.Linear(hidden_dim, output_dim),
+#         )
         
-    def forward(self, x):
-        x = self.fc(x)
-        return x
+#     def forward(self, x):
+#         x = self.fc(x)
+#         return x
