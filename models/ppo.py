@@ -19,7 +19,6 @@ class ActorCritic(nn.Module):
 
         return action_pred, value_pred
     
-    
 def update_policy(ppo, states, actions, log_pi_theta_old, advantages, returns, optimizer, ppo_steps, epsilon):
     total_policy_loss = 0 
     total_value_loss = 0
@@ -81,21 +80,24 @@ class MultiLayerPerceptron(nn.Module):
     def forward(self, x):
         x = self.fc(x)
         return x
+    
+class MLPLSTM(nn.Module):
+    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int, n_layers: int, device: torch.device):
+        super(MLPLSTM, self).__init__()
 
-class LSTMNetwork(nn.Module):
-    def __init__(self, input_size: int, hidden_size: int, output_size: int):
-        super(LSTMNetwork, self).__init__()
+        self.__device = device
 
-        self.hidden_size = hidden_size
-        self.lstm = nn.LSTM(input_size, hidden_size)
-        self.fc = nn.Linear(hidden_size, output_size)
+        self.__hidden_dim = hidden_dim
+        self.__n_layers = n_layers
 
-    def forward(self, x: torch.Tensor, h: torch.Tensor) -> Tuple:
-        out, h = self.lstm(x, h)
-        out = out[-1, :, :]  # Take the last output of LSTM sequence
-        out = self.fc(out)
-        return out, h
+        self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, num_layers=n_layers, batch_first=True)
+        self.linear = nn.Linear(in_features=hidden_dim, out_features=output_dim)
 
-    def init_hidden(self, batch_size: int) -> Tuple:
-        return (torch.zeros(1, batch_size, self.hidden_size),
-                torch.zeros(1, batch_size, self.hidden_size))
+    def forward(self, X_batch: torch.Tensor) -> torch.Tensor:
+        hidden = torch.randn(self.__n_layers, len(X_batch), self.__hidden_dim, device=self.__device)
+        carry = torch.randn(self.__n_layers, len(X_batch), self.__hidden_dim, device=self.__device)
+
+        output, (hidden, carry) = self.lstm(X_batch, (hidden, carry))
+        output = self.linear(output[:,-1])
+
+        return output 

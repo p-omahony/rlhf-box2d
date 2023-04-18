@@ -1,18 +1,20 @@
 env:
   ticker: AAPL
   interval: 1d
-  period: 1y
+  period: 2y
   train_prop: 0.8
-  window_size: 30
+  window_size: 10
 ppo:
   actor_critic:
-    hidden_dim: 512
+    hidden_dim: 256
+    n_lstm_layers: 2
   hyperparameters:
     epsilon: 0.2
     steps: 5
     n_exps: 25
     print_freq: 10
     reward_threshold: 120
+    profit_threshold: 2
     gamma: 0.99
     lr: 0.0001
     episodes: 100
