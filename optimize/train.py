@@ -15,8 +15,8 @@ def train_one_episode(
     policy, 
     optimizer, 
     discount_factor: float, 
-    method: str="reinforce", 
-    max_actions: Optional[int]=None, 
+    method: str, 
+    max_actions: int,  
     ppo_steps: Optional[int]=None, 
     ppo_clip: Optional[int]=None
 ):
@@ -27,10 +27,10 @@ def train_one_episode(
         policy (torch.nn.Module): The parametrized policy to train.
         optimizer (torch.optim.Optimizer): The optimizer to use for training.
         discount_factor (float): The discount factor to use for computing returns.
-        method (str): The method to use for training. Defaults to "reinforce".
-        max_actions (Optional[int]): The maximum number of actions to take in the environment. Defaults to None.
-        ppo_steps (Optional[int]): The number of PPO steps to take. Defaults to None.
-        ppo_clip (Optional[int]): The PPO clipping parameter. Defaults to None.
+        method (str): The method to use for training. Must be either "reinforce" or "ppo".
+        max_actions (int): The maximum number of actions to take in the environment.
+        ppo_steps (Optional[int]): The number of PPO steps to take. Defaults to None. Used if method is "ppo".
+        ppo_clip (Optional[int]): The PPO clipping parameter. Defaults to None. Used if method is "ppo".
     
     Returns:
         Tuple[torch.Tensor, torch.Tensor, float]: The policy loss, value loss, and total reward obtained in the episode.
@@ -59,9 +59,13 @@ def train_one_episode(
         state = torch.FloatTensor(state).unsqueeze(0)
         states.append(state)
         
-        action_pred, value_pred = policy(state)    
+        if method == "ppo": 
+            action_pred, value_pred = policy(state)  
+            values.append(value_pred) 
+        else:
+            action_pred = policy(state)
+
         action_prob = F.softmax(action_pred, dim = -1)
-                
         dist = distributions.Categorical(action_prob)
         action = dist.sample()
         log_prob_action = dist.log_prob(action)
@@ -70,7 +74,6 @@ def train_one_episode(
 
         actions.append(action)
         log_prob_actions.append(log_prob_action)
-        values.append(value_pred)
         rewards.append(reward)
         
         episode_reward += reward
@@ -79,11 +82,11 @@ def train_one_episode(
     states = torch.cat(states)
     actions = torch.cat(actions)    
     log_prob_actions = torch.cat(log_prob_actions)
-    values = torch.cat(values).squeeze(-1)
 
     returns = compute_returns(rewards, discount_factor)
 
     if method == "ppo":        
+        values = torch.cat(values).squeeze(-1)
         advantages = compute_advantages(returns, values)
         policy_loss, value_loss = m.ppo.update_policy(policy, states, actions, log_prob_actions, advantages, returns, optimizer, ppo_steps, ppo_clip)
 
