@@ -1,0 +1,5 @@
+env/
+videos/
+weights/
+__pycache__/
+wandb/

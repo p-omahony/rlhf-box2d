@@ -1,0 +1,8 @@
+gym[box2d]==0.26.2
+matplotlib
+torch
+numpy
+ipython
+scikit-video
+pyaml
+wandb
