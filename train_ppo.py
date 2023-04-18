@@ -10,7 +10,8 @@ import argparse
 
 from utils.rl import compute_advantages, compute_returns
 from utils.functions import save_weights, load_config
-from models.ppo import update_policy, MultiLayerPerceptron, ActorCritic
+from models.ppo import update_policy, ActorCritic
+from models.base_models import MultiLayerPerceptron
 
 def train_one_episode(env, ppo, optimizer, discount_factor, ppo_steps, ppo_clip, max_actions):
     ppo.train()
@@ -79,20 +80,35 @@ def evaluate_one_episode(env, ppo, max_actions):
 def main():
     if args.type == 'exp':
         run = wandb.init()
-    train_env = gym.make('LunarLander-v2')
-    test_env = gym.make('LunarLander-v2')
+
+    if args.env == 'lunarlander':
+        env_name = 'LunarLander-v2'
+    train_env = gym.make(env_name)
+    test_env = gym.make(env_name)
         
-    cfg = load_config('./config.yaml')
+    cfg = load_config('./config-ppo.yaml')
+    actor_cfg = cfg['ppo'][args.env]['actor']
+    critic_cfg = cfg['ppo'][args.env]['critic']
 
-    input_dim = train_env.observation_space.shape[0]
+    #this block (wandb experiment part) only works if and only if actor and critic have the same architecture
     if args.type == 'exp':
-        hidden_dim = wandb.config.hidden_dim
-    else:
-        hidden_dim = cfg['ppo']['actor_critic']['hidden_dim']
-    output_dim = train_env.action_space.n
+        actor_cfg['input_layer'][0][2] = wandb.config.hidden_dim
+        critic_cfg['input_layer'][0][2] = wandb.config.hidden_dim
+        for layer in actor_cfg['hidden_layers']:
+            layer_name = layer[0]
+            if layer_name == 'Linear':
+                layer[1] = wandb.config.hidden_dim
+                layer[2] = wandb.config.hidden_dim
+        for layer in critic_cfg['hidden_layers']:
+            layer_name = layer[0]
+            if layer_name == 'Linear':
+                layer[1] = wandb.config.hidden_dim
+                layer[2] = wandb.config.hidden_dim
+        actor_cfg['input_layer'][0][1] = wandb.config.hidden_dim
+        critic_cfg['input_layer'][0][1] = wandb.config.hidden_dim
 
-    actor = MultiLayerPerceptron(input_dim, hidden_dim, output_dim)
-    critic = MultiLayerPerceptron(input_dim, hidden_dim, 1)
+    actor = MultiLayerPerceptron(actor_cfg)
+    critic = MultiLayerPerceptron(critic_cfg)
 
     ppo = ActorCritic(actor, critic)
 
@@ -101,16 +117,16 @@ def main():
         episodes = wandb.config.episodes
         max_actions = wandb.config.max_actions
     else:
-        lr = cfg['ppo']['hyperparameters']['lr']
-        episodes = cfg['ppo']['hyperparameters']['episodes']
-        max_actions = cfg['ppo']['hyperparameters']['max_actions']
+        lr = cfg['ppo'][args.env]['hyperparameters']['lr']
+        episodes = cfg['ppo'][args.env]['hyperparameters']['episodes']
+        max_actions = cfg['ppo'][args.env]['hyperparameters']['max_actions']
 
-    epsilon = cfg['ppo']['hyperparameters']['epsilon']
-    steps = cfg['ppo']['hyperparameters']['steps']
-    n_exps = cfg['ppo']['hyperparameters']['n_exps']
-    print_freq = cfg['ppo']['hyperparameters']['print_freq']
-    reward_threshold = cfg['ppo']['hyperparameters']['reward_threshold']
-    gamma = cfg['ppo']['hyperparameters']['gamma']
+    epsilon = cfg['ppo'][args.env]['hyperparameters']['epsilon']
+    steps = cfg['ppo'][args.env]['hyperparameters']['steps']
+    n_exps = cfg['ppo'][args.env]['hyperparameters']['n_exps']
+    print_freq = cfg['ppo'][args.env]['hyperparameters']['print_freq']
+    reward_threshold = cfg['ppo'][args.env]['hyperparameters']['reward_threshold']
+    gamma = cfg['ppo'][args.env]['hyperparameters']['gamma']
 
     optimizer = optim.Adam(ppo.parameters(), lr = lr)
 
@@ -152,6 +168,7 @@ def main():
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--type')
+parser.add_argument('-e', '--env', default='lunarlander')
 args = parser.parse_args()
 if args.type == 'exp':
     sweep_configuration = {
