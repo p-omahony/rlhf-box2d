@@ -1,6 +1,6 @@
 import torch 
 
-def reinforce_update(returns: torch.Tensor, log_prob_actions: torch.Tensor, optimizer) -> float:
+def update_policy(returns: torch.Tensor, log_prob_actions: torch.Tensor, optimizer) -> float:
     """Update policy using REINFORCE algorithm.
     
     Args:
