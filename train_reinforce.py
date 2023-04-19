@@ -8,9 +8,7 @@ import numpy as np
 import wandb
 import argparse
 
-from utils.rl import compute_advantages, compute_returns
 from utils.functions import save_weights, load_config
-from models.ppo import update_policy, ActorCritic
 from models.base_models import MultiLayerPerceptron
 from optimize.eval import evaluate_one_episode
 from optimize.train import train_one_episode
@@ -21,6 +19,13 @@ def main():
 
     if args.env == 'lunarlander':
         env_name = 'LunarLander-v2'
+
+    elif args.env == 'blackjack':
+        env_name = 'Blackjack-v1'
+
+    else: 
+        raise ValueError('Invalid environment name. Possible environments are: lunarlander, blackjack.')
+
     train_env = gym.make(env_name)
     test_env = gym.make(env_name)
         

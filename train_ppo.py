@@ -21,6 +21,13 @@ def main():
 
     if args.env == 'lunarlander':
         env_name = 'LunarLander-v2'
+
+    elif args.env == 'blackjack':
+        env_name = 'Blackjack-v1'
+
+    else: 
+        raise ValueError('Invalid environment name. Possible environments are: lunarlander, blackjack.')
+    
     train_env = gym.make(env_name)
     test_env = gym.make(env_name)
         
