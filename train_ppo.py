@@ -12,70 +12,8 @@ from utils.rl import compute_advantages, compute_returns
 from utils.functions import save_weights, load_config
 from models.ppo import update_policy, ActorCritic
 from models.base_models import MultiLayerPerceptron
-
-def train_one_episode(env, ppo, optimizer, discount_factor, ppo_steps, ppo_clip, max_actions):
-    ppo.train()
-        
-    states = []
-    actions = []
-    log_prob_actions = []
-    values = []
-    rewards = []
-    episode_reward = 0
-
-    state, _ = env.reset()
-    terminated, c = False, 0
-    while not terminated and c < max_actions: 
-        state = torch.FloatTensor(state).unsqueeze(0)
-        states.append(state)
-        action_pred, value_pred = ppo(state)    
-        action_prob = F.softmax(action_pred, dim = -1)
-                
-        dist = distributions.Categorical(action_prob)
-        action = dist.sample()
-        log_prob_action = dist.log_prob(action)
-        state, reward, terminated, truncated, info = env.step(action.item())
-        actions.append(action)
-        log_prob_actions.append(log_prob_action)
-        values.append(value_pred)
-        rewards.append(reward)
-        
-        episode_reward += reward
-        c+=1
-
-    states = torch.cat(states)
-    actions = torch.cat(actions)    
-    log_prob_actions = torch.cat(log_prob_actions)
-    values = torch.cat(values).squeeze(-1)
-
-    returns = compute_returns(rewards, discount_factor)
-    advantages = compute_advantages(returns, values)
-
-    policy_loss, value_loss = update_policy(ppo, states, actions, log_prob_actions, advantages, returns, optimizer, ppo_steps, ppo_clip)
-
-    return policy_loss, value_loss, episode_reward
-
-def evaluate_one_episode(env, ppo, max_actions):
-    ppo.eval()
-    
-    terminated, c = False, 0
-    episode_reward = 0
-
-    state, _ = env.reset()
-
-    while not terminated and c < max_actions:
-        state = torch.FloatTensor(state).unsqueeze(0)
-        with torch.no_grad():
-            action_pred, _ = ppo(state)
-            action_prob = F.softmax(action_pred, dim = -1)
-
-        action = torch.argmax(action_prob, dim = -1)
-        state, reward, terminated, truncated, info = env.step(action.item())
-        episode_reward += reward
-
-        c+=1
-        
-    return episode_reward
+from optimize.eval import evaluate_one_episode
+from optimize.train import train_one_episode
 
 def main():
     if args.type == 'exp':
@@ -86,7 +24,7 @@ def main():
     train_env = gym.make(env_name)
     test_env = gym.make(env_name)
         
-    cfg = load_config('./config-ppo.yaml')
+    cfg = load_config(args.config)
     actor_cfg = cfg['ppo'][args.env]['actor']
     critic_cfg = cfg['ppo'][args.env]['critic']
 
@@ -135,8 +73,8 @@ def main():
 
     for episode in range(1, episodes+1):
         
-        clip_loss, value_loss, train_reward = train_one_episode(train_env, ppo, optimizer, gamma, steps, epsilon, max_actions)
-        test_reward = evaluate_one_episode(test_env, ppo, max_actions)
+        clip_loss, value_loss, train_reward = train_one_episode(train_env, ppo, optimizer, gamma, 'ppo', max_actions, steps, epsilon)
+        test_reward = evaluate_one_episode(test_env, ppo, 'ppo', max_actions)
         
         train_rewards.append(train_reward)
         test_rewards.append(test_reward)
@@ -167,9 +105,11 @@ def main():
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-t', '--type')
+parser.add_argument('-t', '--type', default='normal')
+parser.add_argument('-c', '--config', default='config-ppo.yaml')
 parser.add_argument('-e', '--env', default='lunarlander')
 args = parser.parse_args()
+print(f'Training (type={args.type}) of method PPO with config {args.config} for the environement {args.env}...')
 if args.type == 'exp':
     sweep_configuration = {
         'method': 'random',
