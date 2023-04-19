@@ -25,56 +25,45 @@ def main():
     test_env = gym.make(env_name)
         
     cfg = load_config(args.config)
-    actor_cfg = cfg['ppo'][args.env]['actor']
-    critic_cfg = cfg['ppo'][args.env]['critic']
+    policy_cfg = cfg['reinforce'][args.env]['mlp']
 
     #this block (wandb experiment part) only works if and only if actor and critic have the same architecture
     if args.type == 'exp':
-        actor_cfg['input_layer'][0][2] = wandb.config.hidden_dim
-        critic_cfg['input_layer'][0][2] = wandb.config.hidden_dim
-        for layer in actor_cfg['hidden_layers']:
+        policy_cfg['input_layer'][0][2] = wandb.config.hidden_dim
+        for layer in policy_cfg['hidden_layers']:
             layer_name = layer[0]
             if layer_name == 'Linear':
                 layer[1] = wandb.config.hidden_dim
                 layer[2] = wandb.config.hidden_dim
-        for layer in critic_cfg['hidden_layers']:
-            layer_name = layer[0]
-            if layer_name == 'Linear':
-                layer[1] = wandb.config.hidden_dim
-                layer[2] = wandb.config.hidden_dim
-        actor_cfg['input_layer'][0][1] = wandb.config.hidden_dim
-        critic_cfg['input_layer'][0][1] = wandb.config.hidden_dim
+        policy_cfg['input_layer'][0][1] = wandb.config.hidden_dim
 
-    actor = MultiLayerPerceptron(actor_cfg)
-    critic = MultiLayerPerceptron(critic_cfg)
-
-    ppo = ActorCritic(actor, critic)
+    policy = MultiLayerPerceptron(policy_cfg)
 
     if args.type=='exp':
         lr = wandb.config.lr
         episodes = wandb.config.episodes
         max_actions = wandb.config.max_actions
     else:
-        lr = cfg['ppo'][args.env]['hyperparameters']['lr']
-        episodes = cfg['ppo'][args.env]['hyperparameters']['episodes']
-        max_actions = cfg['ppo'][args.env]['hyperparameters']['max_actions']
+        lr = cfg['reinforce'][args.env]['hyperparameters']['lr']
+        episodes = cfg['reinforce'][args.env]['hyperparameters']['episodes']
+        max_actions = cfg['reinforce'][args.env]['hyperparameters']['max_actions']
 
-    epsilon = cfg['ppo'][args.env]['hyperparameters']['epsilon']
-    steps = cfg['ppo'][args.env]['hyperparameters']['steps']
-    n_exps = cfg['ppo'][args.env]['hyperparameters']['n_exps']
-    print_freq = cfg['ppo'][args.env]['hyperparameters']['print_freq']
-    reward_threshold = cfg['ppo'][args.env]['hyperparameters']['reward_threshold']
-    gamma = cfg['ppo'][args.env]['hyperparameters']['gamma']
+    epsilon = cfg['reinforce'][args.env]['hyperparameters']['epsilon']
+    steps = cfg['reinforce'][args.env]['hyperparameters']['steps']
+    n_exps = cfg['reinforce'][args.env]['hyperparameters']['n_exps']
+    print_freq = cfg['reinforce'][args.env]['hyperparameters']['print_freq']
+    reward_threshold = cfg['reinforce'][args.env]['hyperparameters']['reward_threshold']
+    gamma = cfg['reinforce'][args.env]['hyperparameters']['gamma']
 
-    optimizer = optim.Adam(ppo.parameters(), lr = lr)
+    optimizer = optim.Adam(policy.parameters(), lr = lr)
 
     train_rewards = []
     test_rewards = []
 
     for episode in range(1, episodes+1):
         
-        clip_loss, value_loss, train_reward = train_one_episode(train_env, ppo, optimizer, gamma, 'ppo', max_actions, steps, epsilon)
-        test_reward = evaluate_one_episode(test_env, ppo, 'ppo', max_actions)
+        clip_loss, value_loss, train_reward = train_one_episode(train_env, policy, optimizer, gamma, 'reinforce', max_actions, steps, epsilon)
+        test_reward = evaluate_one_episode(test_env, policy, 'reinforce', max_actions)
         
         train_rewards.append(train_reward)
         test_rewards.append(test_reward)
@@ -88,8 +77,7 @@ def main():
                 'episode': episode, 
                 'mean_train_rewards': mean_train_rewards,
                 'mean_test_rewards': mean_test_rewards,
-                'clip_loss': clip_loss,
-                'value_loss': value_loss
+                'clip_loss': clip_loss
             })
 
         
@@ -98,7 +86,7 @@ def main():
         
         if mean_test_rewards >= reward_threshold:
             print(f'Reached reward {str(reward_threshold)} in {episode} episodes')
-            save_weights(ppo, f'ppo_{reward_threshold}_{episode}.pt')
+            save_weights(policy, f'ppo_{reward_threshold}_{episode}.pt')
             
         if mean_test_rewards >= 200:
             break
@@ -106,10 +94,10 @@ def main():
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--type', default='normal')
-parser.add_argument('-c', '--config', default='config-ppo.yaml')
+parser.add_argument('-c', '--config', default='config-reinforce.yaml')
 parser.add_argument('-e', '--env', default='lunarlander')
 args = parser.parse_args()
-print(f'Training (type={args.type}) of method PPO with config {args.config} for the environement {args.env}...')
+print(f'Training (type={args.type}) of method REINFORCE with config {args.config} for the environement {args.env}...')
 if args.type == 'exp':
     sweep_configuration = {
         'method': 'random',
