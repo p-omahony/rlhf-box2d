@@ -6,7 +6,8 @@ import torch.distributions as distributions
 
 from typing import Optional
 
-import models as m
+import models.reinforce as rforce
+import models.ppo as p
 from utils.rl import compute_advantages, compute_returns
 
 
@@ -88,10 +89,10 @@ def train_one_episode(
     if method == "ppo":        
         values = torch.cat(values).squeeze(-1)
         advantages = compute_advantages(returns, values)
-        policy_loss, value_loss = m.ppo.update_policy(policy, states, actions, log_prob_actions, advantages, returns, optimizer, ppo_steps, ppo_clip)
+        policy_loss, value_loss = p.update_policy(policy, states, actions, log_prob_actions, advantages, returns, optimizer, ppo_steps, ppo_clip)
 
     else: 
-        policy_loss = m.reinforce.update_policy(returns, log_prob_actions, optimizer)
+        policy_loss = rforce.update_policy(returns, log_prob_actions, optimizer)
         value_loss = None
 
     return policy_loss, value_loss, episode_reward
