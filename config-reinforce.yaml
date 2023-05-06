@@ -17,7 +17,31 @@ reinforce:
       n_exps: 25
       print_freq: 10
       reward_threshold: 120
+      reward_solved: 200
       gamma: 0.99
       lr: 0.0001
       episodes: 1000
       max_actions: 600
+  cartpole:
+    mlp:
+      input_layer:
+        [[Linear, 4, 32],
+        [Dropout, 0.1],
+        [PReLU]]
+      hidden_layers:
+        [[Linear, 32, 32],
+        [Dropout, 0.1],
+        [PReLU]]
+      output_layer:
+        [[Linear, 32, 2]]
+    hyperparameters:
+      epsilon: 0.2
+      steps: 5
+      n_exps: 25
+      print_freq: 10
+      reward_threshold: 475
+      reward_solved: 500
+      gamma: 0.99
+      lr: 0.0001
+      episodes: 1000
+      max_actions: 1000
