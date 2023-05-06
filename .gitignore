@@ -3,3 +3,4 @@ videos/
 weights/
 __pycache__/
 wandb/
+data/
