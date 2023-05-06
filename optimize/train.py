@@ -10,6 +10,19 @@ import models.reinforce as rforce
 import models.ppo as p
 from utils.rl import compute_advantages, compute_returns
 
+def train_model_with_hf_one_epoch(model, batch, optimizer, loss_func):
+    running_loss = 0.0
+    states, actions = batch
+    optimizer.zero_grad()
+
+    action_preds = model(states)
+
+    loss = loss_func(action_preds, actions)
+    loss.backward()
+
+    optimizer.step()
+
+    running_loss += loss.item()
 
 def train_one_episode(
     env: gym.Env, 

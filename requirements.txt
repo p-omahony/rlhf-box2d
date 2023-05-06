@@ -6,3 +6,4 @@ ipython
 scikit-video
 pyaml
 wandb
+pandas
