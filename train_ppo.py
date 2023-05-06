@@ -21,6 +21,8 @@ def main():
 
     if args.env == 'lunarlander':
         env_name = 'LunarLander-v2'
+    elif args.env == 'cartpole':
+        env_name = 'CartPole-v1'
     train_env = gym.make(env_name)
     test_env = gym.make(env_name)
         
