@@ -3,17 +3,19 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.distributions as distributions
+from torch.utils.data import DataLoader
 import gym
 import numpy as np
 import wandb
 import argparse
 
 from utils.rl import compute_advantages, compute_returns
-from utils.functions import save_weights, load_config
+from utils.functions import save_weights, load_config, repeat_items
 from models.ppo import update_policy, ActorCritic
 from models.base_models import MultiLayerPerceptron
 from optimize.eval import evaluate_one_episode
-from optimize.train import train_one_episode
+from optimize.train import train_one_episode, train_model_with_hf_one_epoch
+from datasets import HFLunarLander, HFCartpole
 
 def main():
     if args.type == 'exp':
@@ -39,8 +41,6 @@ def main():
                 layer[2] = wandb.config.hidden_dim
         policy_cfg['output_layer'][0][1] = wandb.config.hidden_dim
 
-    print(policy_cfg)
-
     policy = MultiLayerPerceptron(policy_cfg)
 
     if args.type=='exp':
@@ -58,12 +58,27 @@ def main():
     reward_solved = cfg['reinforce'][args.env]['hyperparameters']['reward_solved']
     gamma = cfg['reinforce'][args.env]['hyperparameters']['gamma']
 
+    if args.human_feedback == 'true' and args.env == 'lunarlander' :
+        dataset = HFLunarLander('./data/data.csv')
+    elif args.human_feedback == 'true' and args.env == 'cartpole':
+        dataset = HFCartpole('./data/cartpole.csv')
+
+    if args.human_feedback == 'true':
+        dataloader = DataLoader(dataset, batch_size=len(dataset)//episodes+1, shuffle=True)
+        batches = []
+        for x, y in dataloader:
+            batch = [x, y]
+            batches.append(batch)
+        batches = repeat_items(batches, episodes)
+
     optimizer = optim.Adam(policy.parameters(), lr = lr)
 
     train_rewards = []
     test_rewards = []
 
     for episode in range(1, episodes+1):
+        if args.human_feedback == 'true':
+            train_model_with_hf_one_epoch(policy, batch=batches[episode-1], optimizer=optimizer, loss_func=nn.CrossEntropyLoss())
         
         clip_loss, value_loss, train_reward = train_one_episode(train_env, policy, optimizer, gamma, 'reinforce', max_actions)
         test_reward = evaluate_one_episode(test_env, policy, 'reinforce', max_actions)
@@ -98,6 +113,7 @@ def main():
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--type', default='normal')
 parser.add_argument('-c', '--config', default='config-reinforce.yaml')
+parser.add_argument('-f', '--human_feedback', default='false')
 parser.add_argument('-e', '--env', default='lunarlander')
 args = parser.parse_args()
 print(f'Training (type={args.type}) of method REINFORCE with config {args.config} for the environement {args.env}...')
