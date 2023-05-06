@@ -21,6 +21,8 @@ def main():
 
     if args.env == 'lunarlander':
         env_name = 'LunarLander-v2'
+    elif args.env == 'cartpole':
+        env_name = 'CartPole-v1'
     train_env = gym.make(env_name)
     test_env = gym.make(env_name)
         
@@ -35,7 +37,9 @@ def main():
             if layer_name == 'Linear':
                 layer[1] = wandb.config.hidden_dim
                 layer[2] = wandb.config.hidden_dim
-        policy_cfg['input_layer'][0][1] = wandb.config.hidden_dim
+        policy_cfg['output_layer'][0][1] = wandb.config.hidden_dim
+
+    print(policy_cfg)
 
     policy = MultiLayerPerceptron(policy_cfg)
 
@@ -47,12 +51,11 @@ def main():
         lr = cfg['reinforce'][args.env]['hyperparameters']['lr']
         episodes = cfg['reinforce'][args.env]['hyperparameters']['episodes']
         max_actions = cfg['reinforce'][args.env]['hyperparameters']['max_actions']
-
-    epsilon = cfg['reinforce'][args.env]['hyperparameters']['epsilon']
-    steps = cfg['reinforce'][args.env]['hyperparameters']['steps']
+        
     n_exps = cfg['reinforce'][args.env]['hyperparameters']['n_exps']
     print_freq = cfg['reinforce'][args.env]['hyperparameters']['print_freq']
     reward_threshold = cfg['reinforce'][args.env]['hyperparameters']['reward_threshold']
+    reward_solved = cfg['reinforce'][args.env]['hyperparameters']['reward_solved']
     gamma = cfg['reinforce'][args.env]['hyperparameters']['gamma']
 
     optimizer = optim.Adam(policy.parameters(), lr = lr)
@@ -62,7 +65,7 @@ def main():
 
     for episode in range(1, episodes+1):
         
-        clip_loss, value_loss, train_reward = train_one_episode(train_env, policy, optimizer, gamma, 'reinforce', max_actions, steps, epsilon)
+        clip_loss, value_loss, train_reward = train_one_episode(train_env, policy, optimizer, gamma, 'reinforce', max_actions)
         test_reward = evaluate_one_episode(test_env, policy, 'reinforce', max_actions)
         
         train_rewards.append(train_reward)
@@ -88,7 +91,7 @@ def main():
             print(f'Reached reward {str(reward_threshold)} in {episode} episodes')
             save_weights(policy, f'ppo_{reward_threshold}_{episode}.pt')
             
-        if mean_test_rewards >= 200:
+        if mean_test_rewards >= reward_solved:
             break
 
 
@@ -105,10 +108,10 @@ if args.type == 'exp':
         'metric': {'goal': 'maximize', 'name': 'mean_test_rewards'},
         'parameters': 
         {
-            'hidden_dim': {'values': [128, 256, 512]},
-            'episodes': {'values': [1000, 2000, 3000]},
+            'hidden_dim': {'values': [64, 128, 256]},
+            'episodes': {'values': [500, 1000, 1500]},
             'lr': {'max': 0.001, 'min': 0.0001},
-            'max_actions': {'values': [100, 500, 1000]}
+            'max_actions': {'values': [500, 700, 900]}
         }
     }
     sweep_id = wandb.sweep(sweep=sweep_configuration, project='rlhf-box2d')
