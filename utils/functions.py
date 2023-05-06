@@ -14,3 +14,6 @@ def load_config(cfg_path):
     with open(cfg_path, 'r') as ymlfile:
         cfg = yaml.load(ymlfile, Loader)
     return cfg
+
+def repeat_items(l, c):
+    return l * (c // len(l)) + l[:(c % len(l))]
