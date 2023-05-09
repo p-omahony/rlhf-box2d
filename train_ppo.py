@@ -50,6 +50,8 @@ def main():
         critic_cfg['input_layer'][0][1] = wandb.config.hidden_dim
 
     actor = MultiLayerPerceptron(actor_cfg)
+    checkpoint = torch.load('actor.pth')
+    actor.load_state_dict(checkpoint)
     critic = MultiLayerPerceptron(critic_cfg)
 
     ppo = ActorCritic(actor, critic)
@@ -77,6 +79,7 @@ def main():
         
 
     if args.human_feedback == 'true':
+        supervised_optimizer = optim.Adam(ppo.actor.parameters(), lr = 0.0001)
         dataloader = DataLoader(dataset, batch_size=len(dataset)//episodes+1, shuffle=True)
         batches = []
         for x, y in dataloader:
@@ -85,16 +88,16 @@ def main():
         batches = repeat_items(batches, episodes)
 
 
-    optimizer = optim.Adam(ppo.parameters(), lr = lr)
+    rl_optimizer = optim.Adam(ppo.parameters(), lr = lr)
 
     train_rewards = []
     test_rewards = []
 
     for episode in range(1, episodes+1):
         if args.human_feedback == 'true':
-            train_model_with_hf_one_epoch(ppo.actor, batch=batches[episode-1], optimizer=optimizer, loss_func=nn.CrossEntropyLoss())
+            train_model_with_hf_one_epoch(ppo.actor, batch=batches[episode-1], optimizer=supervised_optimizer, loss_func=nn.CrossEntropyLoss())
         
-        clip_loss, value_loss, train_reward = train_one_episode(train_env, ppo, optimizer, gamma, 'ppo', max_actions, steps, epsilon)
+        clip_loss, value_loss, train_reward = train_one_episode(train_env, ppo, rl_optimizer, gamma, 'ppo', max_actions, steps, epsilon)
         test_reward = evaluate_one_episode(test_env, ppo, 'ppo', max_actions)
         
         train_rewards.append(train_reward)
