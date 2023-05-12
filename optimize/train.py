@@ -32,7 +32,9 @@ def train_one_episode(
     method: str, 
     max_actions: int,  
     ppo_steps: Optional[int]=None, 
-    ppo_clip: Optional[int]=None
+    ppo_clip: Optional[int]=None,
+    human_preferences='false',
+    reward_model=None
 ):
     """Train one episode of the environment using the parametrized policy.
     
@@ -84,7 +86,11 @@ def train_one_episode(
         action = dist.sample()
         log_prob_action = dist.log_prob(action)
 
-        state, reward, terminated, truncated, info = env.step(action.item())
+        if human_preferences == 'true':
+            reward = reward_model(state, action)[0][0].detach().numpy()
+            state = state, env_reward, terminated, truncated, info = env.step(action.item())
+        else:
+            state, reward, terminated, truncated, info = env.step(action.item())
 
         actions.append(action)
         log_prob_actions.append(log_prob_action)
