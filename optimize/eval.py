@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from typing import Union
 
 
-def evaluate_one_episode(env: gym.Env, policy, method: str, max_actions: int) -> Union[int, float]:
+def evaluate_one_episode(env: gym.Env, policy, method: str, max_actions: int, human_preferences='false', reward_model=None) -> Union[int, float]:
     """Evaluate one episode of the environment using the policy.
     
     Args:
